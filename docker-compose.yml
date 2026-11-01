@@ -1,0 +1,73 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: ai-chatbot-postgres
+    environment:
+      POSTGRES_DB: chatbot
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+    ports:
+      # Host port for this database. Change it (and DB_URL below) if 5433 is taken.
+      - "${DB_HOST_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  ai-chatbot-api:
+    build: .
+    image: ai-chatbot-api:latest
+    container_name: ai-chatbot-api
+    ports:
+      - "8080:8080"
+    # Pass every variable from the local, git-ignored .env file into the container.
+    # Values under `environment:` below take precedence (they also read .env, with defaults).
+    env_file:
+      - .env
+    environment:
+      STORE_NAME: ${STORE_NAME:-Aronno Mart}
+      APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Dhaka}
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-3600000}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+      DEFAULT_PROVIDER: ${DEFAULT_PROVIDER:-claude}
+      AI_FALLBACK_PROVIDER: ${AI_FALLBACK_PROVIDER:-}
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY}
+      CLAUDE_MODEL: ${CLAUDE_MODEL:-claude-haiku-5-5}
+      CLAUDE_MAX_TOKENS: ${CLAUDE_MAX_TOKENS:-2048}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
+      GEMINI_MAX_TOKENS: ${GEMINI_MAX_TOKENS:-2048}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.4-mini-2026-03-17}
+      OPENAI_MAX_TOKENS: ${OPENAI_MAX_TOKENS:-4096}
+      CHAT_HISTORY_MESSAGES: ${CHAT_HISTORY_MESSAGES:-10}
+      CHAT_HISTORY_CHAR_BUDGET: ${CHAT_HISTORY_CHAR_BUDGET:-6000}
+      CHAT_MAX_MESSAGE_CHARS: ${CHAT_MAX_MESSAGE_CHARS:-2000}
+      CHAT_MAX_MESSAGES_PER_CONVERSATION: ${CHAT_MAX_MESSAGES_PER_CONVERSATION:-100}
+      CHAT_RATE_LIMIT_PER_MINUTE: ${CHAT_RATE_LIMIT_PER_MINUTE:-20}
+      CHAT_MAX_AI_CALLS_PER_DAY: ${CHAT_MAX_AI_CALLS_PER_DAY:-200}
+      # Inside the compose network the database host is the `postgres` service, not localhost.
+      DB_URL: jdbc:postgresql://postgres:5432/chatbot
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      SERVER_PORT: 8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  postgres-data:
