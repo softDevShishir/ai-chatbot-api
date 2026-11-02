@@ -41,6 +41,7 @@ public class ChatService {
     private final ChatHistoryBuilder chatHistoryBuilder;
     private final AiCompletionService aiCompletionService;
     private final RateLimiter rateLimiter;
+    private final HandoffService handoffService;
     private final int maxMessageChars;
     private final int maxMessagesPerConversation;
     private final int maxAiCallsPerDay;
@@ -53,6 +54,7 @@ public class ChatService {
                         ChatHistoryBuilder chatHistoryBuilder,
                         AiCompletionService aiCompletionService,
                         RateLimiter rateLimiter,
+                        HandoffService handoffService,
                         @Value("${chat.max-message-chars}") int maxMessageChars,
                         @Value("${chat.max-messages-per-conversation}") int maxMessagesPerConversation,
                         @Value("${chat.max-ai-calls-per-day}") int maxAiCallsPerDay,
@@ -64,6 +66,7 @@ public class ChatService {
         this.chatHistoryBuilder = chatHistoryBuilder;
         this.aiCompletionService = aiCompletionService;
         this.rateLimiter = rateLimiter;
+        this.handoffService = handoffService;
         this.maxMessageChars = maxMessageChars;
         this.maxMessagesPerConversation = maxMessagesPerConversation;
         this.maxAiCallsPerDay = maxAiCallsPerDay;
@@ -131,6 +134,11 @@ public class ChatService {
                 (int) outcome.result().inputTokens(), (int) outcome.result().outputTokens());
 
         conversationRepository.touchUpdatedAt(conversationId);
+
+        if (handoff) {
+            // Never throws and never waits on Telegram (see HandoffService), so the reply is unaffected.
+            handoffService.onHandoff(conversationId, owner, messageText);
+        }
 
         return new SendMessageResult(replyText, assistantMessage.id(), outcome.providerId(), outcome.result().model(),
                 outcome.result().inputTokens(), outcome.result().outputTokens(), sources, handoff, outcome.fallbackUsed());

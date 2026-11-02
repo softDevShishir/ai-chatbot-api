@@ -28,6 +28,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class ChatServiceTest {
@@ -40,6 +42,7 @@ class ChatServiceTest {
     private KnowledgeSearch knowledgeSearch;
     private AiCompletionService aiCompletionService;
     private RateLimiter rateLimiter;
+    private HandoffService handoffService;
 
     @BeforeEach
     void setUp() {
@@ -48,6 +51,7 @@ class ChatServiceTest {
         knowledgeSearch = mock(KnowledgeSearch.class);
         aiCompletionService = mock(AiCompletionService.class);
         rateLimiter = mock(RateLimiter.class);
+        handoffService = mock(HandoffService.class);
 
         Conversation conversation = new Conversation(CONVERSATION_ID, OWNER, "Help", Instant.now(), Instant.now());
         when(conversationRepository.findByIdAndOwner(CONVERSATION_ID, OWNER)).thenReturn(Optional.of(conversation));
@@ -65,7 +69,7 @@ class ChatServiceTest {
     private ChatService service(int maxMessageChars, int maxMessagesPerConversation, int maxAiCallsPerDay) {
         return new ChatService(conversationRepository, messageRepository, knowledgeSearch,
                 new SystemPromptBuilder("Test Store"), new ChatHistoryBuilder(10, 6000),
-                aiCompletionService, rateLimiter, maxMessageChars, maxMessagesPerConversation,
+                aiCompletionService, rateLimiter, handoffService, maxMessageChars, maxMessagesPerConversation,
                 maxAiCallsPerDay, "Asia/Dhaka");
     }
 
@@ -135,6 +139,7 @@ class ChatServiceTest {
 
         assertThat(result.handoff()).isTrue();
         assertThat(result.reply()).isEqualTo("I can't help with that.");
+        verify(handoffService).onHandoff(CONVERSATION_ID, OWNER, "I need a human");
     }
 
     @Test
@@ -150,6 +155,7 @@ class ChatServiceTest {
 
         assertThat(result.handoff()).isFalse();
         assertThat(result.reply()).isEqualTo("Yes, we have running shoes.");
+        verifyNoInteractions(handoffService);
     }
 
     @Test

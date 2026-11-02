@@ -3,6 +3,7 @@ package com.example.aichatbot;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import com.example.aichatbot.notification.TelegramConfig;
 import com.example.aichatbot.security.AdminCredentialsService;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
@@ -34,6 +35,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
         "claude.api-key=super-secret-claude-key-123",
         "gemini.api-key=super-secret-gemini-key-456",
         "openai.api-key=super-secret-openai-key-789",
+        "telegram.bot-token=424242:super-secret-telegram-token-abc",
+        "telegram.chat-id=42",
         "jwt.secret=super-secret-jwt-signing-key-should-not-leak-anywhere-ok",
         "admin.password=super-secret-admin-password-xyz"
 })
@@ -43,6 +46,7 @@ class SecretLeakTest {
             "super-secret-claude-key-123",
             "super-secret-gemini-key-456",
             "super-secret-openai-key-789",
+            "super-secret-telegram-token-abc",
             "super-secret-jwt-signing-key-should-not-leak-anywhere-ok",
             "super-secret-admin-password-xyz");
 
@@ -59,6 +63,9 @@ class SecretLeakTest {
 
     @Autowired
     private AdminCredentialsService adminCredentialsService;
+
+    @Autowired
+    private TelegramConfig telegramConfig;
 
     @Test
     void secretsNeverAppearInStartupOrRequestLogs() throws Exception {
@@ -105,5 +112,11 @@ class SecretLeakTest {
         String text = adminCredentialsService.toString();
 
         assertThat(text).doesNotContain("super-secret-admin-password-xyz");
+    }
+
+    @Test
+    void telegramConfigMasksTheBotTokenInToString() {
+        assertThat(telegramConfig.isConfigured()).isTrue();
+        assertThat(telegramConfig.toString()).doesNotContain("super-secret-telegram-token-abc");
     }
 }
