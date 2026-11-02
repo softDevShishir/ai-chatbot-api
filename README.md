@@ -7,6 +7,17 @@ history to the chosen AI provider (Claude, Gemini or OpenAI), saves the reply, a
 
 All product/policy data is fictional demo data. This is a backend API only — no UI is included.
 
+## Web UI
+
+A React chat UI for this API lives in a separate repo:
+[softDevShishir/ai-chatbot-ui](https://github.com/softDevShishir/ai-chatbot-ui).
+
+To run both together, start this backend with Docker Compose, then in the UI repo run
+`npm install` and `npm run dev` (the UI proxies `/api` to `http://localhost:8080`).
+
+If the UI is hosted on a different origin, set `CORS_ALLOWED_ORIGINS` on this backend to that
+exact origin.
+
 ## Architecture
 
 ```
@@ -260,7 +271,7 @@ All errors share one JSON shape:
 ## Roadmap
 
 - Streaming responses
-- A React chat UI
+- ~~A React chat UI~~ — done: [ai-chatbot-ui](https://github.com/softDevShishir/ai-chatbot-ui)
 - WhatsApp/Telegram integration
 - Translate Bangla questions to English before knowledge search
 
